@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=yes">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Gerador QR em massa</title>
+
+    <script src="https://unpkg.com/@vkontakte/vk-qr"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            font-family: sans-serif;
+        }
+
+        body {
+            display: flex;
+            align-items: stretch;
+            justify-content: stretch;
+
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        #credits {
+            position: fixed;
+            right: 0.5em;
+            bottom: 0.5em;
+        }
+
+        #app {
+            position: sticky;
+            display: flex;
+            flex-direction: column;
+            flex-basis: 20em;
+            top: 0;
+            height: 100vh;
+
+            margin-right: 3em;
+            padding: 1em;
+
+            background: whitesmoke;
+            box-shadow: 0 0 2em 2em rgba(0, 0, 0, 0.2);
+        }
+
+        label:first-of-type {
+            flex: 1;
+        }
+
+        label {
+            display: flex;
+            flex-direction: column;
+
+            font-weight: bold;
+        }
+
+        label > :first-child {
+            margin-bottom: 1em;
+        }
+
+        textarea {
+            flex: 1;
+
+            border: 0;
+            margin-top: 1em;
+            line-height: 3em;
+
+            background: linear-gradient(to bottom, transparent calc(100% - 1px), #bbb) repeat;
+            background-size: 100% 3em;
+            resize: horizontal;
+        }
+
+        #template {
+            display: block;
+            flex: 1;
+        }
+
+        figure {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+
+            break-inside: avoid;
+            break-after: auto;
+        }
+
+        @media print {
+            #app {
+                display: none;
+            }
+        }
+    </style>
+    <style id="dynamic_style"></style>
+</head>
+<body>
+<div id="app">
+    <h1>Gerador de QR</h1>
+    <label>
+        Conteúdo
+        <textarea id="data" placeholder="Um link por linha"></textarea>
+    </label>
+    <label>
+        Espaçamento
+        <input type="range" min="0" max="3" step="any" id="margin">
+    </label>
+    <label>
+        Tamanho
+        <input type="range" min="5" max="30" step="any" id="size">
+    </label>
+    <button id="send">Imprimir Todos</button>
+
+    <span id="credits">Desenvolvido por <a href="https://kroltan.me">Leonardo Scur</a></span>
+</div>
+
+<div id="template"></div>
+
+<script>
+    const options = {
+        qrSize: 256,
+        ecc: 3,
+    };
+
+    const cache = {};
+
+    size.addEventListener("input", updateStyle);
+    margin.addEventListener("input", updateStyle);
+    data.addEventListener("input", updateContent);
+    send.addEventListener("click", () => {
+        window.print();
+    });
+
+    updateContent();
+
+    function updateStyle() {
+        dynamic_style.innerText = `
+            figure { margin: ${margin.value}em }
+            figure > svg { width: ${size.value}em; height: auto; }
+        `;
+    }
+
+    function updateContent() {
+        const lines = data.value.split("\n");
+        const elements = lines
+            .map(line => {
+                if (line in cache) {
+                    return cache[line];
+                }
+
+                const svg = qrCodeGenerator.createQR(line, options);
+                const element = document.createElement("figure");
+                element.dataset["source"] = line;
+                element.innerHTML = svg;
+                element.appendChild(document.createTextNode(line));
+
+                cache[line] = element;
+
+                return element;
+            });
+
+        for (const toInsert of elements) {
+            template.appendChild(toInsert);
+        }
+
+        while (template.firstChild !== elements[0]) {
+            template.firstChild.remove();
+        }
+    }
+</script>
+</body>
+</html>
